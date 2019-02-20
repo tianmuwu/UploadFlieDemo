@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+    <body>
+        <div style="margin-top: 20px">
+            <h2>上传照片</h2>
+            <input type="button" value="点击H5按钮唤起原生相册" onclick="needToBind()">
+        </div>
+        
+        
+        <script>
+            
+        
+        function needToBind(){
+            uploadImgAndVideo('all',"http://chat.unicornsocialmedia.cn/upload/image");
+        }
+        
+        function uploadImgAndVideo(type,url){
+            document.location = "objc://uploadMedia:/,"+type+","+url;
+            
+        }
+        
+        window.callbackWithUploadMedia = function(data) {
+            alert("上传回调");
+            alert(JSON.stringify(data));
+            if(data){
+                if(data.status_code!=200|| data.code != 'success') {
+                    alert(data.message);
+                } else {
+                    alert("一切正常");
+                }
+            } else {
+                alert("上传失败，请重试");
+            } 
+        }
+        
+        var alerCallback = function()
+        {
+            alert('成功');
+        }
+        
+        </script>
+    </body>
+</html>
