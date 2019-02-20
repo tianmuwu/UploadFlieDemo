@@ -8,15 +8,13 @@
 #import "UpLoadUserpicTool.h"
 #import "AlertMananger.h"
 #import <AssetsLibrary/AssetsLibrary.h>
+#import <Photos/Photos.h>
 #import <Foundation/Foundation.h>
 #import <MobileCoreServices/MobileCoreServices.h>
-#import "ZYQAssetPickerController.h"
 #import "ZAIPromptMsg.h"
 
-@interface UpLoadUserpicTool ()<UIActionSheetDelegate,UIImagePickerControllerDelegate, UINavigationControllerDelegate,ZYQAssetPickerControllerDelegate>
+@interface UpLoadUserpicTool ()<UIActionSheetDelegate,UIImagePickerControllerDelegate, UINavigationControllerDelegate>
 
-
-@property (nonatomic, strong) NSMutableArray  *imageArray;
 @property (nonatomic, strong) UIViewController *viewController;
 @property (nonatomic, copy) FinishSelectImageBlcok imageBlock;
 
@@ -38,13 +36,6 @@
         managerInstance = [[self alloc] init];
     });
     return managerInstance;
-}
-
-- (NSMutableArray *)imageArray{
-    if (!_imageArray) {
-        _imageArray = [[NSMutableArray alloc]init];
-    }
-    return _imageArray;
 }
 
 - (void)selectUserpicSourceWithType:(NSString *)type WithViewController:(UIViewController *)viewController FinishSelectImageBlcok:(FinishSelectImageBlcok)finishSelectImageBlock 
@@ -73,23 +64,13 @@
                 [viewController presentViewController:picker animated:YES completion:nil];///<推出视图控制器
                 
             }else if (index == 2){
-        
-                ZYQAssetPickerController *pickerController = [[ZYQAssetPickerController alloc] init];
-                pickerController.maximumNumberOfSelection = 1;
-                //    pickerController.nowCount = _imageArray.count;
-                pickerController.assetsFilter = ZYQAssetsFilterAllAssets;
-                pickerController.showEmptyGroups=NO;
-                pickerController.delegate = self;
-                pickerController.selectionFilter = [NSPredicate predicateWithBlock:^BOOL(id evaluatedObject, NSDictionary *bindings) {
-                    if ([(ZYQAsset*)evaluatedObject mediaType]==ZYQAssetMediaTypeVideo) {
-                        NSTimeInterval duration = [(ZYQAsset*)evaluatedObject duration];
-                        return duration >= 5;
-                    } else {
-                        return YES;
-                    }
-                }];
-                
-                [viewController presentViewController:pickerController animated:YES completion:nil];///<推出视图控制器
+    
+                UIImagePickerController* picker = [[UIImagePickerController alloc]init];///<图片选择控制器创建
+                picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;///<设置数据来源为拍照
+                picker.allowsEditing = NO;
+                picker.mediaTypes = @[(NSString *)kUTTypeMovie,( NSString *)kUTTypeImage];
+                picker.delegate = self;///<代理设置
+                [viewController presentViewController:picker animated:YES completion:nil];///<推出视图控制器
             }
             else if (index == 3){
                 if (![UIImagePickerController isSourceTypeAvailable:UIImagePickerControllerSourceTypeCamera])return;///<检测该设备
@@ -125,13 +106,12 @@
                 
             }else if (index == 2){
                 
-                ZYQAssetPickerController *pickerController = [[ZYQAssetPickerController alloc] init];
-                pickerController.maximumNumberOfSelection = 1;
-                //    pickerController.nowCount = _imageArray.count;
-                pickerController.assetsFilter = ZYQAssetsFilterAllPhotos;
-                pickerController.showEmptyGroups=NO;
-                pickerController.delegate = self;
-                [viewController presentViewController:pickerController animated:YES completion:nil];///<推出视图控制器
+                UIImagePickerController* picker = [[UIImagePickerController alloc]init];///<图片选择控制器创建
+                picker.sourceType = UIImagePickerControllerSourceTypePhotoLibrary;///<设置数据来源为拍照
+                picker.allowsEditing = NO;
+                picker.delegate = self;///<代理设置
+                [viewController presentViewController:picker animated:YES completion:nil];///<推出视图控制器
+
             }
         }];
 
@@ -170,79 +150,9 @@
         }];
 
     }
-    
-
 }
 
-- (void)assetPickerController:(ZYQAssetPickerController *)picker didFinishPickingAssets:(NSArray *)assets
-{
-    if (assets.count == 0) {
-        [ZAIPromptMsg showWithText:@"您没有选择任何文件"];
-        return;
-    }
-    WeakSelf(self);
-     if ([(ZYQAsset*)assets[0] mediaType]==ZYQAssetMediaTypeVideo) {
-         
-        ZYQAsset *asset = assets[0];
-        [self uploadVideoModel:asset];
-         
-     }else{
-         
-         ZYQAsset *asset = assets[0];
-        
-         [asset setGetFullScreenImage:^(UIImage *result){
-             StrongSelf(self);
-             if (result == nil) {
-                 [ZAIPromptMsg showWithText:@"照片不符合上传规格"];
-                 return ;
-             }else{
-            
-                 dispatch_async(dispatch_get_main_queue(), ^{
-                     
-                     [self uploadImgModel:result];
-                 });
-             }
-             
-         }];
-
-         
-       /**  dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^
-                        {
-                            StrongSelf(self);
-                            for (int i=0; i<assets.count; i++)
-                            {
-        
-                                ZYQAsset *asset = assets[i];
-        
-                                [asset setGetFullScreenImage:^(UIImage *result){
-        
-                                    if (result == nil) {
-                                        [ZAIPromptMsg showWithText:@"照片不符合上传规格"];
-                                        return ;
-                                    }
-                                    if(self.imageArray.count >9){
-                                        [ZAIPromptMsg showWithText:@"您一次只能上传9张照片"];
-                                        NSLog(@"---%ld",self.imageArray.count);
-                                        return ;
-                                    }else{
-                                        [self.imageArray addObject:result];
-                                        dispatch_async(dispatch_get_main_queue(), ^{
-                                            
-                                            [self uploadImgModel:result];
-                                        });
-                                    }
-                                    
-                                    NSLog(@"---%ld",self.imageArray.count);
-                                    
-                                }];
-                                
-                            }
-                        });**/
-     }
-    
-}
-
- //生成上传图片model
+//生成上传图片model
 - (void)uploadImgModel:(UIImage *)image{
     //获取图片名称
     NSLog(@"获取图片名称");
@@ -270,8 +180,7 @@
 - (void)getVideoModel:(id)videoPath{
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         
-    
-        //生成视频名称
+    //生成视频名称
         NSString *mediaName = [self getVideoNameBaseCurrentTime];
         NSLog(@"mediaName: %@", mediaName);
         
@@ -302,38 +211,6 @@
         });
         
     });
-
-}
-
-//上传视频model
-- (void)uploadVideoModel:(ZYQAsset *)asset{
-    WeakSelf(self);
-    //ios9之前
-    if ([asset.originAsset isKindOfClass:[ALAsset class]]) {
-        
-        NSURL *url = [(ALAsset *)asset.originAsset valueForProperty:ALAssetPropertyAssetURL];
-        [self getVideoModel:url];
-        //ios9之后
-    }else if ([asset.originAsset isKindOfClass:[PHAsset class]]){
-        
-        PHVideoRequestOptions *options = [[PHVideoRequestOptions alloc] init];
-        options.version = PHImageRequestOptionsVersionCurrent;
-        options.deliveryMode = PHVideoRequestOptionsDeliveryModeAutomatic;
-        
-        PHImageManager *manager = [PHImageManager defaultManager];
-        StrongSelf(self);
-        [manager requestAVAssetForVideo:(PHAsset *)asset.originAsset options:options resultHandler:^(AVAsset * _Nullable asset, AVAudioMix * _Nullable audioMix, NSDictionary * _Nullable info) {
-            AVURLAsset *urlAsset = (AVURLAsset *)asset;
-            
-            NSURL *url = urlAsset.URL;
-            dispatch_async(dispatch_get_main_queue(), ^{
-                
-                [self getVideoModel:url];
-            });
-            
-            NSLog(@"VideoUrl————————%@",url);
-        }];
-    }
 
 }
 
